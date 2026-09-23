@@ -1,0 +1,182 @@
+{
+  "timestamp": "2026-09-12T05:29:15.167987+00:00",
+  "benchmark_name": "SIH Part 2 - Predictive Tracking & Disturbance Handling",
+  "validation_verdict": "PASS",
+  "simulation": {
+    "total_frames": 400,
+    "virtual_duration_s": 13.333333333333334,
+    "wall_clock_duration_s": 0.0165465000027325,
+    "target_fps": 30.0,
+    "actual_fps": 24174.296675063833
+  },
+  "processing_time_ms": {
+    "mean": 0.0354722509655403,
+    "max": 0.22079999325796962,
+    "min": 0.010499992640689015,
+    "median": 0.039799982914701104,
+    "p95": 0.04943999811075624,
+    "p99": 0.12592199753271405,
+    "std": 0.020798594041968144
+  },
+  "tracking_accuracy_px": {
+    "mean_overall": 9.107117865899342,
+    "max_overall": 28.267121302747586,
+    "min_overall": 1.7179164448753925,
+    "std_overall": 4.7816062619299675,
+    "mean_in_tracking": 9.649546562007567,
+    "mean_in_predicting": 6.471670530935285,
+    "mean_in_searching": 6.790028640216356,
+    "mean_in_lost": 16.94718001949387
+  },
+  "lock_retention": {
+    "lock_retention_pct": 70.75,
+    "first_lock_frame": 0,
+    "first_lock_time_s": 0.0,
+    "locked_frames": 283,
+    "post_lock_frames": 400
+  },
+  "detection_availability": {
+    "availability_pct": 71.25,
+    "detected_frames": 285,
+    "occluded_or_outside_fov_frames": 115
+  },
+  "state_distribution": {
+    "UNINITIALIZED": 0,
+    "TRACKING": 279,
+    "PREDICTING": 43,
+    "SEARCHING": 63,
+    "REACQUIRING": 4,
+    "LOST": 11
+  },
+  "recovery_events": {
+    "detection_loss_events": 4,
+    "local_search_activations": 2,
+    "successful_reacquisitions": 4,
+    "reacquisitions_from_searching": 1,
+    "reacquisitions_from_lost": 1,
+    "failed_searches": 1,
+    "lost_state_entries": 1,
+    "lost_recoveries": 1
+  },
+  "robustness": {
+    "outliers_injected": 2,
+    "outliers_rejected": 2,
+    "atmospheric_turbulence_level": "MEDIUM",
+    "atmospheric_turbulence_std_px": 6.5,
+    "measurement_noise_std_px": 4.0,
+    "camera_jitter_std_px": 1.0
+  },
+  "camera_controller": {
+    "mean_camera_tracking_error_px": 34.529812680138285,
+    "max_camera_tracking_error_px": 104.48491000479812,
+    "mode_distribution": {
+      "TRACKING_SERVO": 283,
+      "PREDICTIVE_SERVO": 43,
+      "SEARCH_SERVO": 63,
+      "HOLDING": 11
+    }
+  },
+  "configuration": {
+    "beacon_start_pos": [
+      750.0,
+      360.0
+    ],
+    "beacon_velocity": [
+      2.5,
+      1.0
+    ],
+    "beacon_random_seed": 42,
+    "disturbance_random_seed": 101,
+    "turbulence_random_seed": 202,
+    "occlusion_intervals": [
+      [
+        60,
+        72
+      ],
+      [
+        120,
+        155
+      ],
+      [
+        230,
+        295
+      ]
+    ],
+    "outlier_events": [
+      [
+        190,
+        [
+          1100.0,
+          100.0
+        ]
+      ],
+      [
+        191,
+        [
+          1100.0,
+          100.0
+        ]
+      ]
+    ],
+    "gating_threshold_px": 85.0,
+    "search_start_frames": 15,
+    "search_radius_px": 140.0,
+    "max_prediction_frames": 55,
+    "camera_fov": [
+      500.0,
+      380.0
+    ]
+  },
+  "validation_checks": [
+    {
+      "name": "Frame Count Integrity",
+      "passed": true,
+      "details": "400 / 400 frames processed"
+    },
+    {
+      "name": "State Distribution Sum",
+      "passed": true,
+      "details": "Sum of state counts (400) == total frames (400)"
+    },
+    {
+      "name": "Metrics Numeric Validity",
+      "passed": true,
+      "details": "All computed performance metrics are strictly finite numbers"
+    },
+    {
+      "name": "Initial Lock Acquisition",
+      "passed": true,
+      "details": "Initial TRACKING lock acquired at frame #0"
+    },
+    {
+      "name": "Short Detection-Loss Handling",
+      "passed": true,
+      "details": "PREDICTING state entered (43 frames) and reacquired"
+    },
+    {
+      "name": "Local Search Activation",
+      "passed": true,
+      "details": "Local search activated (2 times, 63 frames in SEARCHING)"
+    },
+    {
+      "name": "Local Search Reacquisition",
+      "passed": true,
+      "details": "1 successful reacquisitions from bounded local search"
+    },
+    {
+      "name": "LOST State Entry & Reacquisition",
+      "passed": true,
+      "details": "LOST state entered (11 frames) and successfully recovered (1 times)"
+    },
+    {
+      "name": "Outlier Rejection Gating",
+      "passed": true,
+      "details": "2 / 2 injected false outliers rejected by gating"
+    },
+    {
+      "name": "Tracking Accuracy in Locked State",
+      "passed": true,
+      "details": "Average error in TRACKING state: 9.65 px (under medium turbulence)"
+    }
+  ]
+}

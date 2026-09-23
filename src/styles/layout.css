@@ -1,0 +1,319 @@
+/* ==========================================================================
+   App shell
+   --------------------------------------------------------------------------
+   The viewport is the subject of this screen, so it gets the space: a fixed
+   header, then a two-column body (canvas + status rail), then a dock that
+   holds the detail panels one at a time instead of six stacked accordions.
+   ========================================================================== */
+
+.app {
+  display: grid;
+  grid-template-rows: var(--header-h) minmax(0, 1fr);
+  height: 100vh;
+  height: 100dvh;
+  background:
+    radial-gradient(1200px 700px at 18% -8%, rgba(45, 212, 191, 0.05), transparent 60%),
+    radial-gradient(1000px 600px at 88% 4%, rgba(56, 189, 248, 0.045), transparent 62%),
+    var(--bg-void);
+}
+
+/* ==========================================================================
+   Header
+   ========================================================================== */
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--s5);
+  padding: 0 var(--s5);
+  background: var(--bg-overlay);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--line-faint);
+  z-index: 30;
+}
+
+.brand { display: flex; align-items: center; gap: var(--s3); flex: none; }
+
+.brand__mark {
+  position: relative;
+  width: 26px; height: 26px;
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+.brand__mark::before,
+.brand__mark::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+}
+.brand__mark::before {
+  inset: 0;
+  border: 1px solid var(--teal-line);
+}
+.brand__mark::after {
+  width: 7px; height: 7px;
+  background: var(--teal);
+  box-shadow: 0 0 12px var(--teal);
+}
+/* The sweep ring reads as "system is scanning" — it stops when the feed drops. */
+.brand__sweep {
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  border: 1px solid transparent;
+  border-top-color: var(--teal);
+  opacity: 0.7;
+  animation: sweep 3.2s linear infinite;
+}
+.header[data-live='false'] .brand__sweep { animation-play-state: paused; opacity: 0.2; }
+@keyframes sweep { to { transform: rotate(360deg); } }
+
+.brand__name {
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--text-bright);
+  line-height: 1.1;
+}
+.brand__sub {
+  font-size: var(--fs-micro);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--text-muted);
+  line-height: 1.1;
+}
+
+/* The state machine's current node — the single most important value here,
+   so it is the only element in the header with a coloured surface. */
+.state-chip {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  padding: 5px 12px 5px 10px;
+  border-radius: var(--r-full);
+  border: 1px solid var(--line-soft);
+  background: var(--bg-raised);
+  flex: none;
+}
+.state-chip__label {
+  font-size: var(--fs-micro);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.state-chip__value {
+  font-family: var(--font-mono);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--text-bright);
+}
+.state-chip[data-tone='ok']    { border-color: var(--ok-line);    background: var(--ok-dim); }
+.state-chip[data-tone='warn']  { border-color: var(--warn-line);  background: var(--warn-dim); }
+.state-chip[data-tone='fault'] { border-color: var(--fault-line); background: var(--fault-dim); }
+
+.header__status {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  margin-left: auto;
+  min-width: 0;
+}
+
+/* Compact key/value used across the header. Values never wrap mid-token —
+   that was the single worst artefact of the previous header. */
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 0 var(--s3);
+  border-left: 1px solid var(--line-faint);
+  min-width: 0;
+}
+.stat:first-child { border-left: 0; }
+.stat__k {
+  font-size: var(--fs-micro);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.stat__v {
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.link-state {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  padding: 5px 11px;
+  border-radius: var(--r-full);
+  border: 1px solid var(--line-soft);
+  font-size: var(--fs-label);
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+.link-state[data-live='true'] { color: var(--ok); border-color: var(--ok-line); background: var(--ok-dim); }
+.link-state[data-live='false'] { color: var(--warn); border-color: var(--warn-line); background: var(--warn-dim); }
+
+/* ==========================================================================
+   Body: viewport + rail
+   ========================================================================== */
+
+.body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--rail-w);
+  gap: var(--s4);
+  padding: var(--s4);
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* The viewport takes the room; the dock is capped so it can never squeeze the
+   map down to a strip, which is what an `auto` row did. */
+.stage {
+  display: grid;
+  grid-template-rows: minmax(240px, 1fr) auto;
+  gap: var(--s4);
+  min-width: 0;
+  min-height: 0;
+}
+
+.rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+/* ==========================================================================
+   Dock — detail panels, one at a time
+   ========================================================================== */
+
+.dock {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  /* Never more than ~40% of the stage, so the map always dominates. */
+  max-height: min(320px, 32vh);
+  overflow: hidden;
+}
+.dock[data-collapsed='true'] { max-height: none; }
+.dock__bar {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  padding: var(--s2) var(--s3);
+  border-bottom: 1px solid var(--line-faint);
+  flex: none;
+}
+.dock__tabs { display: flex; gap: 2px; overflow-x: auto; }
+.dock__tab {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  padding: 6px 12px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background var(--t-fast), color var(--t-fast);
+}
+.dock__tab:hover { color: var(--text-bright); background: rgba(255, 255, 255, 0.04); }
+.dock__tab[aria-selected='true'] { color: var(--text-bright); background: var(--bg-raised); }
+.dock__tab-badge {
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  padding: 1px 5px;
+  border-radius: var(--r-full);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-muted);
+}
+.dock__tab[aria-selected='true'] .dock__tab-badge { background: var(--ok-dim); color: var(--ok); }
+
+.dock__body {
+  padding: var(--s4);
+  overflow: auto;
+  min-height: 0;
+  flex: 1;
+}
+.dock[data-collapsed='true'] .dock__body { display: none; }
+
+/* ==========================================================================
+   Config drawer
+   ========================================================================== */
+
+.drawer-scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 4, 8, 0.6);
+  backdrop-filter: blur(2px);
+  z-index: 40;
+  animation: fade-in var(--t-base);
+}
+@keyframes fade-in { from { opacity: 0; } }
+
+.drawer {
+  position: fixed;
+  top: 0; right: 0; bottom: 0;
+  width: min(380px, 92vw);
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-surface);
+  border-left: 1px solid var(--line-soft);
+  box-shadow: var(--shadow-pop);
+  z-index: 41;
+  animation: slide-in var(--t-base);
+}
+@keyframes slide-in { from { transform: translateX(24px); opacity: 0; } }
+
+.drawer__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s3);
+  padding: var(--s4) var(--s5);
+  border-bottom: 1px solid var(--line-faint);
+}
+.drawer__body { padding: var(--s5); overflow-y: auto; display: flex; flex-direction: column; gap: var(--s5); }
+.drawer__foot { margin-top: auto; padding: var(--s4) var(--s5); border-top: 1px solid var(--line-faint); }
+
+/* ==========================================================================
+   Responsive
+   --------------------------------------------------------------------------
+   Below 1180px the rail drops under the stage rather than squeezing the
+   canvas; the old layout simply clipped.
+   ========================================================================== */
+
+@media (max-width: 1180px) {
+  .app { grid-template-rows: var(--header-h) minmax(0, 1fr); }
+  .body {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+    overflow-y: auto;
+  }
+  .rail {
+    flex-direction: row;
+    flex-wrap: wrap;
+    overflow: visible;
+  }
+  .rail > * { flex: 1 1 300px; }
+}
+
+@media (max-width: 860px) {
+  .header { gap: var(--s3); padding: 0 var(--s3); overflow-x: auto; }
+  .brand__sub { display: none; }
+  .body { padding: var(--s3); gap: var(--s3); }
+}

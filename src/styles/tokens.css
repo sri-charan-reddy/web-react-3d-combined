@@ -1,0 +1,126 @@
+/* ==========================================================================
+   Design tokens — Raynex Mission Control
+   --------------------------------------------------------------------------
+   Rule this palette follows: chrome is neutral, colour means state.
+   Greys carry the interface; a saturated accent appears only where something
+   is actually happening (a live link, a fault, an active stage). That is what
+   keeps a six-accent HUD from turning into noise.
+   ========================================================================== */
+
+:root {
+  /* --- Surfaces: a deep blue-black that recedes behind glowing content --- */
+  --bg-void: #04060c;
+  --bg-deep: #070b14;
+  --bg-surface: #0b111d;
+  --bg-raised: #101827;
+  --bg-inset: #060a12;
+  --bg-overlay: rgba(8, 13, 23, 0.88);
+
+  /* --- Hairlines. Borders stay near-invisible; elevation does the work. --- */
+  --line-faint: rgba(148, 176, 220, 0.07);
+  --line-soft: rgba(148, 176, 220, 0.12);
+  --line-strong: rgba(148, 176, 220, 0.20);
+
+  /* --- Text: four steps, enough for hierarchy without muddy mid-greys --- */
+  --text-bright: #eef3fb;
+  --text-primary: #c3cede;
+  --text-secondary: #7e8da6;
+  --text-muted: #56637a;
+
+  /* --- Accents ---------------------------------------------------------
+     Each has a -dim (fills, borders, resting state) and a full-strength
+     value reserved for live/alert states. Never paint a large area with
+     the full-strength value.
+     ------------------------------------------------------------------- */
+  --teal: #2dd4bf;
+  --teal-dim: rgba(45, 212, 191, 0.16);
+  --teal-line: rgba(45, 212, 191, 0.32);
+
+  --cyan: #38bdf8;
+  --cyan-dim: rgba(56, 189, 248, 0.14);
+  --cyan-line: rgba(56, 189, 248, 0.30);
+
+  --amber: #fbbf24;
+  --amber-dim: rgba(251, 191, 36, 0.14);
+  --amber-line: rgba(251, 191, 36, 0.30);
+
+  --rose: #fb7185;
+  --rose-dim: rgba(251, 113, 133, 0.14);
+  --rose-line: rgba(251, 113, 133, 0.32);
+
+  --violet: #a78bfa;
+  --violet-dim: rgba(167, 139, 250, 0.14);
+
+  /* Semantic aliases — components reference these, not the hues above. */
+  --ok: var(--teal);
+  --ok-dim: var(--teal-dim);
+  --ok-line: var(--teal-line);
+  --warn: var(--amber);
+  --warn-dim: var(--amber-dim);
+  --warn-line: var(--amber-line);
+  --fault: var(--rose);
+  --fault-dim: var(--rose-dim);
+  --fault-line: var(--rose-line);
+  --info: var(--cyan);
+  --info-dim: var(--cyan-dim);
+  --info-line: var(--cyan-line);
+
+  /* --- Type ------------------------------------------------------------
+     Caps + tracking are reserved for small labels only. Values and body
+     text are normal case, which is what gives the page hierarchy back.
+     ------------------------------------------------------------------- */
+  --font-display: 'Outfit', system-ui, -apple-system, sans-serif;
+  --font-ui: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  --fs-micro: 10px;
+  --fs-label: 11px;
+  --fs-small: 12px;
+  --fs-base: 13px;
+  --fs-body: 14px;
+  --fs-lg: 16px;
+  --fs-xl: 20px;
+  --fs-display: 26px;
+
+  --tracking-label: 0.09em;
+  --tracking-display: -0.01em;
+
+  /* --- Space: 4px base scale --- */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 20px;
+  --s6: 24px;
+  --s8: 32px;
+  --s10: 40px;
+
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  --r-full: 999px;
+
+  /* --- Elevation. Depth comes from shadow + inner highlight, not borders. */
+  --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 8px 24px -12px rgba(0, 0, 0, 0.9);
+  --shadow-raised: 0 1px 0 rgba(255, 255, 255, 0.05) inset, 0 16px 40px -16px rgba(0, 0, 0, 0.95);
+  --shadow-pop: 0 20px 50px -12px rgba(0, 0, 0, 0.95);
+
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --t-fast: 0.12s var(--ease);
+  --t-base: 0.2s var(--ease);
+
+  --header-h: 56px;
+  --rail-w: 340px;
+}
+
+/* Operators run this on projectors and in dark rooms; honour the OS setting
+   rather than animating regardless. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

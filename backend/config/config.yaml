@@ -1,0 +1,64 @@
+simulation:
+  width: 1280
+  height: 720
+  target_fps: 30
+  frame_delay_ms: 33
+  grid_spacing: 80
+  grid_visible: true
+  beacon_motion:
+    enabled: false
+    type: "sinusoidal"
+    axis: "y"
+    amplitude: 80.0
+    frequency: 0.15
+
+
+terminal_a:
+  id: "TERMINAL_A"
+  name: "Local Terminal A"
+  position: [180, 360]
+
+terminal_b:
+  id: "TERMINAL_B"
+  name: "Remote Terminal B"
+  position: [1100, 360]
+
+camera:
+  position: [180, 360]
+  orientation_deg: 0.0      # 0 degrees points straight right (+X direction toward Terminal B)
+  field_of_view_deg: 35.0   # Total angular field-of-view spread in degrees
+
+
+  fov_range_px: 950         # Visual reach of the FOV cone in pixels
+  image_width: 1280
+  image_height: 720
+
+beacon:
+  position: [1100, 360]
+  radius: 14
+  intensity: 1.0            # Normalized intensity [0.0 - 1.0]
+  active: true
+  glow_layers: 4            # Multi-layer rendering for circular optical glow effect
+
+detection:
+  intensity_threshold: 160
+  min_area: 4
+  max_area: 5000
+  min_peak_brightness: 180
+
+alignment:
+  tolerance_px: 15.0
+
+control:
+  kp: 0.15
+  max_step_deg: 1.0
+  enabled: true
+
+search:
+  enabled: true
+  search_speed_deg_per_sec: 30.0
+  max_sweep_deg: 360.0
+
+
+
+

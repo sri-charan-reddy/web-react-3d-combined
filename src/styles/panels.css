@@ -1,0 +1,417 @@
+/* ==========================================================================
+   Viewport (canvas stage)
+   ========================================================================== */
+
+.viewport {
+  position: relative;
+  min-height: 240px;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+  overflow: hidden;
+  background: var(--bg-inset);
+}
+
+.viewport__bar {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  padding: var(--s2) var(--s3);
+  border-bottom: 1px solid var(--line-faint);
+  flex: none;
+}
+.viewport__tools { margin-left: auto; display: flex; align-items: center; gap: var(--s2); }
+
+/* Zoom readout sits between the -/+ buttons; tabular so it doesn't shuffle. */
+.zoom {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--line-faint);
+  border-radius: var(--r-md);
+  background: var(--bg-inset);
+}
+.zoom__level {
+  min-width: 46px;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: var(--fs-label);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+  user-select: none;
+}
+
+.canvas-stage {
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+  /* Depth: a lit volume rather than a flat panel. */
+  background:
+    radial-gradient(120% 90% at 50% 45%, rgba(20, 34, 54, 0.55), transparent 70%),
+    var(--bg-void);
+}
+.canvas-stage canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+  touch-action: none;
+}
+.canvas-stage canvas[data-panning='true'] { cursor: grabbing; }
+.canvas-stage img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Vignette + scanline: sells the HUD without touching legibility. */
+.canvas-stage::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(120% 100% at 50% 50%, transparent 55%, rgba(2, 4, 8, 0.55) 100%);
+}
+
+/* --- Floating overlays -------------------------------------------------- */
+.hud {
+  position: absolute;
+  display: flex;
+  gap: var(--s2);
+  pointer-events: none;
+  z-index: 2;
+}
+.hud--tl { top: var(--s3); left: var(--s3); flex-direction: column; align-items: flex-start; }
+.hud--bl { bottom: var(--s3); left: var(--s3); flex-wrap: wrap; max-width: calc(100% - var(--s6)); }
+.hud--br { bottom: var(--s3); right: var(--s3); }
+
+.hud-card {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  padding: 5px 10px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--line-faint);
+  background: var(--bg-overlay);
+  backdrop-filter: blur(8px);
+  font-size: var(--fs-label);
+  white-space: nowrap;
+}
+.hud-card__k { color: var(--text-muted); text-transform: uppercase; letter-spacing: var(--tracking-label); }
+.hud-card__v { font-weight: 600; color: var(--text-bright); }
+
+.legend { display: flex; flex-wrap: wrap; gap: var(--s3); }
+.legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-micro);
+  color: var(--text-secondary);
+}
+.legend__swatch { width: 8px; height: 8px; border-radius: 2px; flex: none; }
+
+/* Hover tooltip for a terminal node. Positioned in JS from canvas coords. */
+.node-tip {
+  position: absolute;
+  z-index: 5;
+  min-width: 150px;
+  padding: var(--s2) var(--s3);
+  border-radius: var(--r-sm);
+  border: 1px solid var(--line-soft);
+  background: var(--bg-overlay);
+  backdrop-filter: blur(10px);
+  box-shadow: var(--shadow-pop);
+  pointer-events: none;
+  transform: translate(-50%, calc(-100% - 12px));
+}
+.node-tip__name {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--fs-small);
+  color: var(--text-bright);
+  margin-bottom: 3px;
+}
+.node-tip__row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s4);
+  font-size: var(--fs-micro);
+  color: var(--text-secondary);
+}
+.node-tip__row b { color: var(--text-primary); font-weight: 600; }
+.node-tip__hint {
+  margin-top: 5px;
+  padding-top: 4px;
+  border-top: 1px solid var(--line-faint);
+  font-size: var(--fs-micro);
+  color: var(--text-muted);
+}
+
+/* ==========================================================================
+   Rail panels
+   ========================================================================== */
+
+.panel { display: flex; flex-direction: column; }
+.panel__head {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  padding: var(--s3) var(--s4);
+  border-bottom: 1px solid var(--line-faint);
+}
+.panel__title {
+  font-size: var(--fs-label);
+  font-weight: 600;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+.panel__tools { margin-left: auto; display: flex; align-items: center; gap: var(--s2); }
+.panel__body { padding: var(--s3) var(--s4) var(--s4); }
+
+/* --- Key/value rows: replaces the old box-in-box grid ------------------- */
+.kv { display: flex; flex-direction: column; }
+.kv__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s3);
+  padding: 7px 0;
+  border-bottom: 1px solid var(--line-faint);
+}
+.kv__row:last-child { border-bottom: 0; }
+.kv__k { display: flex; align-items: center; gap: var(--s2); font-size: var(--fs-small); color: var(--text-secondary); }
+.kv__v { font-size: var(--fs-small); font-weight: 600; color: var(--text-bright); text-align: right; }
+
+/* --- Metric tiles ------------------------------------------------------- */
+.metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; background: var(--line-faint); }
+.metric { padding: var(--s3); background: var(--bg-surface); }
+.metric__k {
+  font-size: var(--fs-micro);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.metric__v {
+  margin-top: 2px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-body);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-bright);
+}
+.metric__sub { font-size: var(--fs-micro); color: var(--text-muted); }
+
+/* --- Vertical pipeline stepper -----------------------------------------
+   Vertical because a 9-11 node horizontal pipeline was unreadable at any
+   width the card actually gets.
+   ---------------------------------------------------------------------- */
+.steps { display: flex; flex-direction: column; }
+.step {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  padding: 5px 0 5px 0;
+}
+/* Connector line through the node column. */
+.step::before {
+  content: '';
+  position: absolute;
+  left: 9px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--line-soft);
+}
+.step:first-child::before { top: 50%; }
+.step:last-child::before { bottom: 50%; }
+
+.step__node {
+  position: relative;
+  z-index: 1;
+  width: 19px; height: 19px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid var(--line-soft);
+  background: var(--bg-deep);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-muted);
+}
+.step__label { font-size: var(--fs-small); color: var(--text-secondary); }
+
+.step[data-done='true'] .step__node { border-color: var(--ok-line); color: var(--ok); background: var(--ok-dim); }
+.step[data-done='true'] .step__label { color: var(--text-primary); }
+
+.step[data-active='true'] .step__node {
+  border-color: var(--ok);
+  background: var(--ok);
+  color: #04100e;
+  box-shadow: 0 0 0 4px var(--ok-dim);
+}
+.step[data-active='true'] .step__label { color: var(--text-bright); font-weight: 600; }
+
+.step[data-tone='fault'][data-active='true'] .step__node {
+  border-color: var(--fault);
+  background: var(--fault);
+  color: #2a0910;
+  box-shadow: 0 0 0 4px var(--fault-dim);
+}
+
+/* ==========================================================================
+   Dock panel content
+   ========================================================================== */
+
+.table { width: 100%; border-collapse: collapse; font-size: var(--fs-small); }
+.table th {
+  text-align: left;
+  padding: 0 var(--s3) var(--s2);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 600;
+  border-bottom: 1px solid var(--line-faint);
+}
+.table td { padding: 7px var(--s3); border-bottom: 1px solid var(--line-faint); color: var(--text-primary); }
+.table tr:last-child td { border-bottom: 0; }
+.table tr[data-target='true'] td { background: var(--ok-dim); }
+.table tbody tr { transition: background var(--t-fast); }
+.table tbody tr:hover td { background: rgba(255, 255, 255, 0.035); }
+.table__name { display: flex; align-items: center; gap: var(--s2); font-weight: 600; }
+
+.grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--s4); }
+.stack { display: flex; flex-direction: column; gap: var(--s3); }
+.row { display: flex; align-items: center; gap: var(--s2); flex-wrap: wrap; }
+
+/* --- Scenario cards ----------------------------------------------------- */
+.scenarios { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: var(--s2); }
+.scenario {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--s3);
+  text-align: left;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line-faint);
+  background: var(--bg-inset);
+  transition: border-color var(--t-fast), background var(--t-fast);
+}
+.scenario:hover { border-color: var(--line-strong); background: var(--bg-raised); }
+.scenario[aria-pressed='true'] { border-color: var(--ok-line); background: var(--ok-dim); }
+.scenario__n { font-size: var(--fs-micro); letter-spacing: var(--tracking-label); color: var(--text-muted); }
+.scenario[aria-pressed='true'] .scenario__n { color: var(--ok); }
+.scenario__t { font-size: var(--fs-small); font-weight: 600; color: var(--text-bright); }
+.scenario__d { font-size: var(--fs-micro); color: var(--text-muted); }
+
+/* --- Test suite --------------------------------------------------------- */
+.progress { height: 4px; border-radius: var(--r-full); background: var(--bg-inset); overflow: hidden; }
+.progress__fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--teal), var(--cyan));
+  transition: width var(--t-base);
+}
+.progress__fill[data-fault='true'] { background: var(--fault); }
+
+.suite { padding: var(--s3); border-radius: var(--r-md); border: 1px solid var(--line-faint); background: var(--bg-inset); }
+.suite__head { display: flex; align-items: center; justify-content: space-between; gap: var(--s2); margin-bottom: var(--s2); }
+.suite__name { font-size: var(--fs-label); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-secondary); }
+.suite__items { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+.suite__item { display: flex; align-items: center; gap: var(--s2); font-size: var(--fs-small); color: var(--text-secondary); }
+
+/* --- Event log ---------------------------------------------------------- */
+.log {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  max-height: 240px;
+  overflow-y: auto;
+  font-family: var(--font-mono);
+  font-size: var(--fs-small);
+}
+.log__line {
+  padding: 3px var(--s3);
+  border-left: 2px solid var(--line-faint);
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.log__line[data-part='1'] { border-left-color: var(--cyan); }
+.log__line[data-part='2'] { border-left-color: var(--violet); }
+.log__line[data-part='3'] { border-left-color: var(--amber); }
+.log__line[data-part='4'] { border-left-color: var(--teal); }
+.log__line[data-alert='true'] { border-left-color: var(--fault); color: var(--fault); background: var(--fault-dim); }
+
+/* --- Stepper (numeric input) -------------------------------------------- */
+.stepper { display: flex; align-items: center; gap: var(--s2); }
+.stepper__value {
+  flex: 1;
+  text-align: center;
+  padding: 8px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--line-soft);
+  background: var(--bg-inset);
+  font-family: var(--font-mono);
+  font-size: var(--fs-lg);
+  color: var(--text-bright);
+}
+
+/* --- Empty / error states ---------------------------------------------- */
+.empty { padding: var(--s6); text-align: center; color: var(--text-muted); font-size: var(--fs-small); }
+
+.fatal {
+  margin: var(--s10) auto;
+  max-width: 480px;
+  padding: var(--s6);
+  text-align: center;
+  border-radius: var(--r-lg);
+  border: 1px solid var(--fault-line);
+  background: var(--fault-dim);
+}
+
+/* ==========================================================================
+   Expanded viewport
+   --------------------------------------------------------------------------
+   The 3D scene and a zoomed-in map both want far more room than the docked
+   panel gives them. Expanding lifts the viewport out to a full-window overlay
+   with its toolbar and HUD intact — the canvases resize themselves through
+   their ResizeObservers, so nothing needs re-initialising.
+   ========================================================================== */
+
+.viewport-scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 4, 8, 0.82);
+  backdrop-filter: blur(3px);
+  z-index: 49;
+  animation: fade-in var(--t-base);
+}
+
+.viewport--expanded {
+  position: fixed;
+  inset: var(--s4);
+  z-index: 50;
+  box-shadow: var(--shadow-pop);
+  animation: expand-in 0.18s var(--ease);
+}
+
+@keyframes expand-in {
+  from { opacity: 0; transform: scale(0.985); }
+}
+
+/* Give the HUD more breathing room at full size. */
+.viewport--expanded .hud--tl { top: var(--s4); left: var(--s4); }
+.viewport--expanded .hud--bl { bottom: var(--s4); left: var(--s4); }
+.viewport--expanded .hud--br { bottom: var(--s4); right: var(--s4); }
+
+.expand-hint {
+  font-size: var(--fs-micro);
+  color: var(--text-muted);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+}

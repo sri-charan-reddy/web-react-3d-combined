@@ -1,0 +1,229 @@
+/* ==========================================================================
+   Base — reset, document shell, and the primitives used across panels
+   ========================================================================== */
+
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+html, body, #root { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--bg-void);
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: var(--fs-base);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow: hidden; /* the app manages its own scroll regions */
+}
+
+h1, h2, h3, h4 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: var(--tracking-display);
+  color: var(--text-bright);
+}
+
+button { font: inherit; color: inherit; cursor: pointer; }
+:focus { outline: none; }
+:focus-visible {
+  outline: 2px solid var(--info);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+
+/* --- Scrollbars: present but quiet -------------------------------------- */
+* { scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; }
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb {
+  background: var(--line-soft);
+  border: 3px solid transparent;
+  background-clip: content-box;
+  border-radius: var(--r-full);
+}
+*::-webkit-scrollbar-thumb:hover { background: var(--line-strong); background-clip: content-box; }
+
+/* ==========================================================================
+   Primitives
+   ========================================================================== */
+
+/* Small caps label. The ONLY place caps + tracking are used. */
+.label {
+  font-size: var(--fs-label);
+  font-weight: 600;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* Numeric readout — tabular so digits don't jitter at 30 Hz. */
+.readout {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+}
+
+.card {
+  background: linear-gradient(180deg, var(--bg-surface), var(--bg-deep));
+  border: 1px solid var(--line-faint);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-card);
+}
+
+/* --- Status chip -------------------------------------------------------- */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  padding: 3px 9px;
+  border-radius: var(--r-full);
+  border: 1px solid var(--line-soft);
+  background: rgba(255, 255, 255, 0.03);
+  font-size: var(--fs-label);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  transition: color var(--t-base), border-color var(--t-base), background var(--t-base);
+}
+.chip--ok    { color: var(--ok);    border-color: var(--ok-line);    background: var(--ok-dim); }
+.chip--warn  { color: var(--warn);  border-color: var(--warn-line);  background: var(--warn-dim); }
+.chip--fault { color: var(--fault); border-color: var(--fault-line); background: var(--fault-dim); }
+.chip--info  { color: var(--info);  border-color: var(--info-line);  background: var(--info-dim); }
+
+/* Status dot. Only the live/fault variants pulse — resting states stay still
+   so motion in the corner of the eye always means something. */
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
+}
+.dot--pulse {
+  box-shadow: 0 0 0 0 currentColor;
+  animation: dot-pulse 2s var(--ease) infinite;
+}
+@keyframes dot-pulse {
+  0%   { box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 60%, transparent); }
+  70%  { box-shadow: 0 0 0 6px color-mix(in srgb, currentColor 0%, transparent); }
+  100% { box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 0%, transparent); }
+}
+
+/* --- Buttons ------------------------------------------------------------ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s2);
+  padding: 7px 13px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--line-soft);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-primary);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background var(--t-fast), border-color var(--t-fast), color var(--t-fast);
+}
+.btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: var(--line-strong);
+  color: var(--text-bright);
+}
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.btn--primary {
+  background: var(--teal-dim);
+  border-color: var(--teal-line);
+  color: var(--teal);
+}
+.btn--primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--teal) 24%, transparent);
+  border-color: var(--teal);
+  color: #ffffff;
+}
+.btn--icon { padding: 6px; }
+.btn--sm { padding: 4px 9px; font-size: var(--fs-label); }
+
+/* --- Segmented control (view tabs, dock tabs, OFF/ON pairs) -------------- */
+.segmented {
+  display: inline-flex;
+  padding: 3px;
+  gap: 2px;
+  background: var(--bg-inset);
+  border: 1px solid var(--line-faint);
+  border-radius: var(--r-md);
+}
+.segmented__item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  padding: 5px 11px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  transition: background var(--t-fast), color var(--t-fast);
+}
+.segmented__item:hover { color: var(--text-bright); background: rgba(255, 255, 255, 0.04); }
+.segmented__item[aria-pressed='true'],
+.segmented__item[aria-selected='true'] {
+  background: var(--bg-raised);
+  color: var(--text-bright);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06) inset;
+}
+
+/* --- Field -------------------------------------------------------------- */
+.field { display: flex; flex-direction: column; gap: var(--s2); }
+.field__hint { font-size: var(--fs-label); color: var(--text-muted); }
+
+.input,
+.select {
+  width: 100%;
+  padding: 8px 10px;
+  background: var(--bg-inset);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-sm);
+  color: var(--text-bright);
+  font-size: var(--fs-base);
+  font-family: var(--font-ui);
+  transition: border-color var(--t-fast);
+}
+.input:focus, .select:focus { border-color: var(--info-line); }
+
+.select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath fill='%237e8da6' d='M6 8.2 2.3 4.5l.9-.9L6 6.4l2.8-2.8.9.9z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 28px;
+  cursor: pointer;
+}
+
+/* --- Utility ------------------------------------------------------------ */
+.text-ok    { color: var(--ok); }
+.text-warn  { color: var(--warn); }
+.text-fault { color: var(--fault); }
+.text-info  { color: var(--info); }
+.text-muted { color: var(--text-muted); }
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Indeterminate spinner, used by in-progress status rows. */
+.spin { animation: spin 1.1s linear infinite; transform-origin: 50% 50%; }
+@keyframes spin { to { transform: rotate(360deg); } }

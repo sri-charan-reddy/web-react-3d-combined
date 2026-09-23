@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FSOC Adaptive Link: Autonomous PAT Mission Control</title>
+  <meta name="description" content="Free-Space Optical Communication (FSOC) Pointing, Acquisition, and Tracking (PAT) Adaptive Recovery Engine & Security Monitoring System.">
+  
+  <!-- Modern Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- =========================================================================
+       1. Top Command Bar (Sticky Header with Synchronized Zoom Controls)
+       ========================================================================= -->
+  <header class="top-bar" id="topBar">
+    <div class="brand-block">
+      <div class="brand-logo">
+        <span class="laser-dot"></span>
+        <span class="laser-ring"></span>
+      </div>
+      <div class="brand-text">
+        <h1 class="brand-title">FSOC ADAPTIVE LINK</h1>
+        <span class="brand-sub">RAYNEX FSOC MISSION CONTROL • POINTING, ACQUISITION &amp; TRACKING ENGINE</span>
+      </div>
+    </div>
+
+    <div class="top-metrics">
+      <div class="metric-pill">
+        <span class="metric-label">TARGET TERMINAL</span>
+        <span class="metric-val text-cyan" id="topTargetTerminal">Terminal-03</span>
+      </div>
+
+      <div class="metric-pill">
+        <span class="metric-label">IDENTIFICATION</span>
+        <span class="badge text-emerald" id="topIdentBadge">✓ IDENTIFIED</span>
+      </div>
+
+      <div class="metric-pill">
+        <span class="metric-label">AUTHENTICATION</span>
+        <span class="badge text-emerald" id="topAuthBadge">✓ HMAC-SHA256</span>
+      </div>
+
+      <div class="metric-pill">
+        <span class="metric-label">OPTICAL LINK</span>
+        <span class="badge link-badge link-active" id="topOpticalLinkBadge">✓ ALIGNED</span>
+      </div>
+
+      <div class="metric-pill">
+        <span class="metric-label">FSOC STATUS</span>
+        <span class="badge state-badge" id="topFsocStatusBadge">● ACTIVE</span>
+      </div>
+
+      <!-- Top Command Bar Zoom Controls -->
+      <div class="top-zoom-controls" id="topZoomControls">
+        <span class="zoom-label">ZOOM:</span>
+        <button class="zoom-btn" id="btnZoomOutTop" title="Zoom Out (50% - 200%)" type="button">−</button>
+        <span class="zoom-display zoom-level-display" id="zoomLevelDisplayTop">100%</span>
+        <button class="zoom-btn" id="btnZoomInTop" title="Zoom In (50% - 200%)" type="button">+</button>
+        <button class="zoom-reset-btn" id="btnZoomResetTop" title="Reset Viewport Scale (100%)" type="button">RESET</button>
+      </div>
+
+      <div class="connection-indicator connected" id="connectionStatus" title="Telemetry Feed Live">
+        <span class="conn-dot"></span>
+        <span class="conn-text">LIVE (30Hz)</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- =========================================================================
+       Full-Workspace Zoom Viewport & Scalable Container
+       ========================================================================= -->
+  <div class="workspace-viewport" id="workspaceViewport">
+    <div class="workspace-scalable" id="workspaceScalable">
+      <main class="dashboard-container" id="dashboardContainer">
+
+        <!-- =====================================================================
+             SECTION 1: FINDING / DISCOVERY (ALWAYS VISIBLE & PROMINENT)
+             ===================================================================== -->
+        <section class="card finding-card" id="findingDiscoverySection">
+          <div class="finding-header">
+            <div class="card-title-group">
+              <span class="icon">🛰️</span>
+              <h2>FINDING &amp; MULTI-TERMINAL RF DISCOVERY</h2>
+            </div>
+            <div class="finding-header-badges">
+              <span class="badge badge-cyan" id="configStatusBadge">5 Terminals in Range • Target: Terminal-03</span>
+            </div>
+          </div>
+
+          <div class="finding-grid">
+            <!-- Left Pane: Operator Configuration Controls -->
+            <div class="finding-controls-pane">
+              <div class="form-group">
+                <label for="inputNumTerminals" class="form-label">Number of Terminals</label>
+                <div class="stepper-box">
+                  <button type="button" class="btn-step" onclick="stepTerminalCount(-1)">−</button>
+                  <input type="number" id="inputNumTerminals" min="2" max="12" value="5" readonly>
+                  <button type="button" class="btn-step" onclick="stepTerminalCount(1)">+</button>
+                </div>
+                <span class="form-hint">Remote moving terminals in operational sector (2–12)</span>
+              </div>
+
+              <div class="form-group">
+                <label for="selectTargetTerminal" class="form-label">Target Terminal</label>
+                <div class="custom-select-wrap">
+                  <select id="selectTargetTerminal" onchange="onTargetTerminalSelect(this.value)">
+                    <option value="TERMINAL_03" selected>Terminal-03</option>
+                  </select>
+                </div>
+                <span class="form-hint">Selected communication target endpoint</span>
+              </div>
+
+              <button class="btn btn-primary btn-apply" id="btnApplyTerminalConfig" onclick="applyTerminalConfiguration()">
+                <span>⚡</span> APPLY CONFIGURATION
+              </button>
+            </div>
+
+            <!-- Right Pane: Discovery Progress & High-Level Acquisition Status -->
+            <div class="finding-status-pane">
+              <!-- Progressive Discovery Banner -->
+              <div class="discovery-progress-banner">
+                <div class="disc-label-group">
+                  <span class="disc-title">RF DISCOVERY PROGRESS:</span>
+                  <span class="rf-disc-count" id="rfDiscCountText">5 / 5 DISCOVERED</span>
+                  <span class="status-pill pill-detected" id="rfDiscStatusBadge">✓ COMPLETE</span>
+                </div>
+                <span class="target-highlight-pill">TARGET TERMINAL → <strong id="tableTargetHighlight">Terminal-03</strong></span>
+              </div>
+
+              <!-- Finding & Discovery Key Milestones Grid -->
+              <div class="finding-status-grid">
+                <div class="finding-metric-box">
+                  <span class="f-label">TARGET IDENTIFICATION</span>
+                  <span class="f-val text-emerald" id="commIdentStatus">✓ IDENTIFIED</span>
+                  <span class="f-sub" id="commIdentSub">Verified in RF network pool</span>
+                </div>
+
+                <div class="finding-metric-box">
+                  <span class="f-label">HMAC-SHA256 AUTH</span>
+                  <span class="f-val text-emerald" id="commAuthStatus">✓ AUTHENTICATED</span>
+                  <span class="f-sub">Single-use nonce verified</span>
+                </div>
+
+                <div class="finding-metric-box">
+                  <span class="f-label">OPTICAL FINDING</span>
+                  <span class="f-val text-emerald" id="commOpticalScanStatus">✓ TARGET ACQUIRED</span>
+                  <span class="f-sub" id="commOpticalScanSub">360° rotational scan lock</span>
+                </div>
+
+                <div class="finding-metric-box box-fsoc">
+                  <span class="f-label">OVERALL FSOC STATE</span>
+                  <span class="f-val text-emerald" id="commFsocBadge">● ACTIVE</span>
+                  <span class="f-sub" id="commFsocSub">Bi-directional optical link</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- =====================================================================
+             SECTION 2: VISUAL SIMULATION CENTERPIECE
+             ===================================================================== -->
+        <section class="card visualizer-card">
+          <div class="card-header">
+            <div class="view-tabs">
+              <button class="tab-btn active" id="tabArena" onclick="switchView('arena')">
+                <span class="icon">🌐</span> 2D Kinematic Arena
+              </button>
+              <button class="tab-btn" id="tabSensor" onclick="switchView('sensor')">
+                <span class="icon">🎯</span> Boresight Sensor View
+              </button>
+              <button class="tab-btn" id="tabCamera" onclick="switchView('camera')">
+                <span class="icon">📷</span> Optical Camera Feed
+              </button>
+            </div>
+
+            <!-- Arena Viewport Zoom Controls -->
+            <div class="arena-zoom-widget" id="arenaZoomControls">
+              <button class="zoom-btn" id="btnZoomOut" title="Zoom Out (50% - 200%)" type="button">−</button>
+              <span class="zoom-display zoom-level-display" id="zoomLevelDisplay">100%</span>
+              <button class="zoom-btn" id="btnZoomIn" title="Zoom In (50% - 200%)" type="button">+</button>
+              <button class="zoom-reset-btn" id="btnZoomReset" title="Reset Viewport Scale (100%)" type="button">RESET VIEW</button>
+            </div>
+
+            <span class="legend-badge" id="viewModeBadge">2D KINEMATIC ARENA</span>
+          </div>
+
+          <div class="canvas-viewport" id="canvasContainer">
+            <!-- Arena Canvas (1280 x 720 Native Resolution) -->
+            <canvas id="arenaCanvas" width="1280" height="720" class="sim-canvas active"></canvas>
+            
+            <!-- Sensor Canvas -->
+            <canvas id="sensorCanvas" width="1280" height="720" class="sim-canvas"></canvas>
+            
+            <!-- Camera Feed Frame -->
+            <div id="cameraFeedContainer" class="camera-feed-box">
+              <img id="cameraFeedImg" src="/api/camera_frame" alt="Optical Sensor Feed">
+              <div class="camera-hud-overlay">
+                <span>FOV: 35.0°</span>
+                <span id="camDetectedText">BEACON: LOCKED</span>
+              </div>
+            </div>
+
+            <!-- Clean High-Level Overlay -->
+            <div class="canvas-clean-overlay">
+              <div class="clean-overlay-item">
+                <span class="clean-label">TRACKING TARGET:</span>
+                <span class="clean-val text-cyan" id="overlayTargetName">Terminal-03</span>
+              </div>
+              <div class="clean-overlay-item">
+                <span class="clean-label">OPTICAL LINK:</span>
+                <span class="clean-val text-emerald" id="overlayOpticalStatus">✓ ALIGNED</span>
+              </div>
+              <div class="clean-overlay-item">
+                <span class="clean-label">FSOC STATE:</span>
+                <span class="clean-val text-emerald" id="overlayFsocState">● ACTIVE</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Canvas Legend -->
+          <div class="canvas-legend">
+            <span class="legend-item"><span class="legend-dot dot-cyan"></span> Terminal A (Local RX)</span>
+            <span class="legend-item"><span class="legend-dot dot-target"></span> Target Terminal (TX)</span>
+            <span class="legend-item"><span class="legend-dot dot-other"></span> Other Remote Terminals</span>
+            <span class="legend-item"><span class="legend-dot dot-beam"></span> Optical FSOC Beam</span>
+            <span class="legend-item"><span class="legend-dot dot-cone"></span> Camera FOV Cone (35°)</span>
+            <span class="legend-item"><span class="legend-dot dot-kalman"></span> Kalman Predict</span>
+          </div>
+        </section>
+
+        <!-- =====================================================================
+             SECTION 3: COLLAPSIBLE DROPDOWN ACCORDION PANELS
+             ===================================================================== -->
+        <div class="accordions-container">
+
+          <!-- -----------------------------------------------------------------
+               Accordion 1: Terminal Details (Collapsed by default)
+               ----------------------------------------------------------------- -->
+          <section class="accordion-card" id="accordionTerminalDetails">
+            <div class="accordion-header" onclick="toggleAccordion('terminalDetails')">
+              <div class="accordion-header-left">
+                <span class="accordion-icon">🛰️</span>
+                <h3 class="accordion-title">TERMINAL DETAILS</h3>
+                <span class="accordion-summary" id="terminalDetailsSummary">5 Active Terminals • Target: Terminal-03</span>
+              </div>
+              <span class="accordion-chevron" id="chevronTerminalDetails">▼</span>
+            </div>
+            <div class="accordion-body" id="bodyTerminalDetails" style="display: none;">
+              <div class="accordion-inner">
+                <div class="table-scroll-wrapper">
+                  <table class="terminals-table">
+                    <thead>
+                      <tr>
+                        <th>Terminal</th>
+                        <th>RF Discovery</th>
+                        <th>Motion</th>
+                        <th>Role</th>
+                      </tr>
+                    </thead>
+                    <tbody id="terminalsTableBody">
+                      <!-- Dynamically populated from backend -->
+                      <tr class="row-target">
+                        <td><strong>Terminal-03</strong></td>
+                        <td><span class="status-pill pill-target">✓ DISCOVERED</span></td>
+                        <td><span class="motion-pill">● Moving</span></td>
+                        <td><span class="role-pill role-target">Target</span></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- -----------------------------------------------------------------
+               Accordion 2: Optical Tracking & PAT Lifecycle (Collapsed by default)
+               ----------------------------------------------------------------- -->
+          <section class="accordion-card" id="accordionOpticalTracking">
+            <div class="accordion-header" onclick="toggleAccordion('opticalTracking')">
+              <div class="accordion-header-left">
+                <span class="accordion-icon">🎯</span>
+                <h3 class="accordion-title">OPTICAL TRACKING &amp; PAT LIFECYCLE</h3>
+                <span class="accordion-summary" id="opticalTrackingSummary">Boresight Aligned • Tracking Active</span>
+              </div>
+              <span class="accordion-chevron" id="chevronOpticalTracking">▼</span>
+            </div>
+            <div class="accordion-body" id="bodyOpticalTracking" style="display: none;">
+              <div class="accordion-inner">
+                <!-- Status Row -->
+                <div class="opt-tracking-grid">
+                  <div class="status-item-card">
+                    <div class="status-item-header">
+                      <span class="item-title">Target Terminal</span>
+                      <span class="item-value text-cyan" id="commTargetTerminal">Terminal-03</span>
+                    </div>
+                    <div class="item-sub">Selected communication endpoint</div>
+                  </div>
+
+                  <div class="status-item-card">
+                    <div class="status-item-header">
+                      <span class="item-title">RF Discovery</span>
+                      <span class="item-badge text-emerald" id="commRfStatus">✓ 5 / 5 DISCOVERED</span>
+                    </div>
+                    <div class="item-sub" id="commRfSub">Continuous RF beacon discovery across deployed sector</div>
+                  </div>
+
+                  <div class="status-item-card">
+                    <div class="status-item-header">
+                      <span class="item-title">Optical Tracking</span>
+                      <span class="item-badge text-emerald" id="commOpticalLinkStatus">✓ ALIGNED</span>
+                    </div>
+                    <div class="item-sub" id="commOpticalSub">Boresight pointing error within fine alignment margin</div>
+                  </div>
+
+                  <div class="status-item-card card-fsoc-active" id="commFsocCard">
+                    <div class="status-item-header">
+                      <span class="item-title fsoc-title">FSOC Active</span>
+                      <span class="fsoc-badge-pill" id="commStatusOverallBadge">ONLINE</span>
+                    </div>
+                    <div class="item-sub">High-bandwidth optical link nominal</div>
+                  </div>
+                </div>
+
+                <!-- Primary PAT Lifecycle Pipeline Flow -->
+                <div class="lifecycle-track-block">
+                  <div class="track-header">
+                    <span class="track-name">MAIN DEMONSTRATION FLOW (PRIMARY PAT PIPELINE):</span>
+                  </div>
+                  <div class="lifecycle-pipeline" id="primaryPipeline">
+                    <div class="pipe-step" data-step="DEPLOY_TERMINALS">
+                      <span class="step-num">1</span>
+                      <span class="step-label">DEPLOY TERMINALS</span>
+                    </div>
+                    <div class="pipe-arrow">→</div>
+                    <div class="pipe-step" data-step="RF_TRANSMISSION">
+                      <span class="step-num">2</span>
+                      <span class="step-label">RF TRANSMISSION</span>
+                    </div>
+                    <div class="pipe-arrow">→</div>
+                    <div class="pipe-step" data-step="RF_DISCOVERY">
+                      <span class="step-num">3</span>
+                      <span class="step-label">RF DISCOVERY</span>
+                    </div>
+                    <div class="pipe-arrow">→</div>
+                    <div class="pipe-step" data-step="TARGET_IDENTIFICATION">
+                      <span class="step-num">4</span>
+                      <span class="step-label">TARGET IDENTIFIED</span>
+                    </div>
+                    <div class="pipe-arrow">→</div>
+                    <div class="pipe-step" data-step="HMAC_AUTHENTICATION">
+                      <span class="step-num">5</span>
+                      <span class="step-label">HMAC-SHA256 AUTH</span>
+                    </div>
+                    <div class="pipe-arrow">→</div>
+                    <div class="pipe-step" data-step="OPTICAL_SEARCH">
+                      <span class="step-num">6</span>
+                      <span class="step-label">360° OPTICAL SCAN</span>
+                    </div>
+                    <div class="pipe-arrow">→</div>
+                    <div class="pipe-step" data-step="OPTICAL_TRACKING">
+                      <span class="step-num">7</span>
+                      <span class="step-label">OPTICAL TRACKING</span>
+                    </div>
+                    <div class="pipe-arrow">→</div>
+                    <div class="pipe-step" data-step="FINE_ALIGNMENT">
+                      <span class="step-num">8</span>
+                      <span class="step-label">FINE ALIGNMENT</span>
+                    </div>
+                    <div class="pipe-arrow">→</div>
+                    <div class="pipe-step step-goal" data-step="FSOC_ACTIVE">
+                      <span class="step-num">★</span>
+                      <span class="step-label">FSOC ACTIVE</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- -----------------------------------------------------------------
+               Accordion 3: Disturbance Recovery Engine (Collapsed by default)
+               ----------------------------------------------------------------- -->
+          <section class="accordion-card" id="accordionRecovery">
+            <div class="accordion-header" onclick="toggleAccordion('recovery')">
+              <div class="accordion-header-left">
+                <span class="accordion-icon">🔄</span>
+                <h3 class="accordion-title">DISTURBANCE RECOVERY ENGINE</h3>
+                <span class="accordion-summary" id="recoverySummaryBadge">Recovery: NONE (Nominal)</span>
+              </div>
+              <span class="accordion-chevron" id="chevronRecovery">▼</span>
+            </div>
+            <div class="accordion-body" id="bodyRecovery" style="display: none;">
+              <div class="accordion-inner">
+                <!-- Playback Row -->
+                <div class="sim-playback-row">
+                  <div class="sim-playback-controls">
+                    <button class="btn btn-ctrl" id="btnPlayPause" onclick="togglePlayPause()">
+                      <span id="playPauseIcon">⏸</span> <span id="playPauseText">Pause</span>
+                    </button>
+                    <button class="btn btn-ctrl" id="btnSingleStep" onclick="stepSimulation()">
+                      <span>⏭</span> Step
+                    </button>
+                    <button class="btn btn-ctrl" id="btnResetSim" onclick="resetSimulation()">
+                      <span>🔄</span> Reset
+                    </button>
+                    <select class="select-speed" id="selectSpeed" onchange="changeSpeed(this.value)">
+                      <option value="0.5">0.5x Speed</option>
+                      <option value="1.0" selected>1.0x Normal</option>
+                      <option value="2.0">2.0x Fast</option>
+                    </select>
+                  </div>
+                  <div class="lifecycle-status-tags">
+                    <span class="stage-tag" id="currentStageTag">STAGE: <strong id="currentStageText">FSOC ACTIVE</strong></span>
+                    <span class="recovery-tag" id="currentRecoveryTag">RECOVERY: NONE</span>
+                  </div>
+                </div>
+
+                <!-- Recovery Status Box -->
+                <div class="status-item-card" id="commRecoveryCard">
+                  <div class="status-item-header">
+                    <span class="item-title">Adaptive Recovery State</span>
+                    <span class="recovery-mode-badge" id="commRecoveryMechanism">NONE (NOMINAL)</span>
+                  </div>
+                  <div class="item-sub" id="commRecoverySub">Adaptive recovery engine ready on standby</div>
+                </div>
+
+                <!-- Live Scenario Disturbance Toggles -->
+                <div class="disturb-toggles-pane">
+                  <span class="pane-subtitle">LIVE SCENARIO DISTURBANCE INJECTIONS:</span>
+                  <div class="disturb-buttons-row">
+                    <div class="disturb-toggle-box">
+                      <span class="toggle-name">Cloud / Occlusion</span>
+                      <div class="binary-btn-group" id="groupCloud">
+                        <button class="btn-toggle active" id="btnCloudOff" onclick="toggleCloud(false)">OFF</button>
+                        <button class="btn-toggle btn-danger-toggle" id="btnCloudOn" onclick="toggleCloud(true)">ON</button>
+                      </div>
+                    </div>
+
+                    <div class="disturb-toggle-box">
+                      <span class="toggle-name">Turbulence</span>
+                      <div class="binary-btn-group" id="groupTurbulence">
+                        <button class="btn-toggle active" id="btnTurbOff" onclick="toggleTurbulence(false)">OFF</button>
+                        <button class="btn-toggle btn-warning-toggle" id="btnTurbOn" onclick="toggleTurbulence(true)">ON</button>
+                      </div>
+                    </div>
+
+                    <div class="disturb-toggle-box">
+                      <span class="toggle-name">Platform Vibration</span>
+                      <div class="binary-btn-group" id="groupVibration">
+                        <button class="btn-toggle active" id="btnVibOff" onclick="toggleVibration(false)">OFF</button>
+                        <button class="btn-toggle btn-warning-toggle" id="btnVibOn" onclick="toggleVibration(true)">ON</button>
+                      </div>
+                    </div>
+
+                    <div class="disturb-toggle-box">
+                      <span class="toggle-name">Severe Disturbance</span>
+                      <div class="binary-btn-group" id="groupSevere">
+                        <button class="btn-toggle active" id="btnSevOff" onclick="toggleSevere(false)">OFF</button>
+                        <button class="btn-toggle btn-danger-toggle" id="btnSevOn" onclick="toggleSevere(true)">ON</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Scenario Demonstrations -->
+                <div class="scenarios-pane">
+                  <span class="pane-subtitle">SCENARIO DEMONSTRATIONS:</span>
+                  <div class="scenario-buttons-grid">
+                    <button class="btn-scenario active" id="btnScenNormal" onclick="triggerScenario('normal')">
+                      <span class="scen-badge">SCENARIO 1</span>
+                      <span class="scen-main">Standard PAT</span>
+                      <span class="scen-info">Optical Search &amp; Tracking</span>
+                    </button>
+                    <button class="btn-scenario" id="btnScenTempLoss" onclick="triggerScenario('temporary-loss')">
+                      <span class="scen-badge">SCENARIO 2</span>
+                      <span class="scen-main">Cloud Occlusion</span>
+                      <span class="scen-info">Predictive Kalman Recovery</span>
+                    </button>
+                    <button class="btn-scenario" id="btnScenDeepLoss" onclick="triggerScenario('deep-loss')">
+                      <span class="scen-badge">SCENARIO 3</span>
+                      <span class="scen-main">Deep Loss → RF</span>
+                      <span class="scen-info">Auxiliary RF &amp; HMAC Handshake</span>
+                    </button>
+                    <button class="btn-scenario" id="btnScenRogue" onclick="triggerScenario('rogue-auth')">
+                      <span class="scen-badge">SCENARIO 4</span>
+                      <span class="scen-main">Rogue RF Spoof</span>
+                      <span class="scen-info">Cryptographic Rejection</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Disturbance Recovery Flow -->
+                <div class="lifecycle-track-block mt-xs">
+                  <div class="track-header">
+                    <span class="track-name">AUTONOMOUS DISTURBANCE RECOVERY PIPELINE:</span>
+                  </div>
+                  <div class="lifecycle-pipeline pipeline-recovery" id="recoveryPipeline">
+                    <div class="pipe-step" data-step="FSOC_ACTIVE_BASE">
+                      <span class="step-num">1</span>
+                      <span class="step-label">FSOC ACTIVE</span>
+                    </div>
+                    <div class="pipe-arrow">↓</div>
+                    <div class="pipe-step step-alert" data-step="BEACON_LOST">
+                      <span class="step-num">2</span>
+                      <span class="step-label">BEACON LOST</span>
+                    </div>
+                    <div class="pipe-arrow">→</div>
+                    <div class="pipe-step" data-step="PREDICTIVE_RECOVERY">
+                      <span class="step-num">3</span>
+                      <span class="step-label">PREDICTIVE RECOVERY</span>
+                    </div>
+                    <div class="pipe-arrow">→</div>
+                    <div class="pipe-step" data-step="LOCAL_REACQUISITION">
+                      <span class="step-num">4</span>
+                      <span class="step-label">LOCAL REACQUISITION</span>
+                    </div>
+                    <div class="pipe-arrow">→</div>
+                    <div class="pipe-step" data-step="OPTICAL_SEARCH">
+                      <span class="step-num">5</span>
+                      <span class="step-label">360° OPTICAL SEARCH</span>
+                    </div>
+                    <div class="pipe-arrow">→</div>
+                    <div class="pipe-step" data-step="RF_DISCOVERY_REC">
+                      <span class="step-num">6</span>
+                      <span class="step-label">RF RECOVERY</span>
+                    </div>
+                    <div class="pipe-arrow">→</div>
+                    <div class="pipe-step" data-step="HMAC_AUTH_REC">
+                      <span class="step-num">7</span>
+                      <span class="step-label">HMAC AUTH</span>
+                    </div>
+                    <div class="pipe-arrow">→</div>
+                    <div class="pipe-step" data-step="RF_DIRECTION_REC">
+                      <span class="step-num">8</span>
+                      <span class="step-label">RF DIRECTION</span>
+                    </div>
+                    <div class="pipe-arrow">→</div>
+                    <div class="pipe-step" data-step="OPTICAL_REACQUISITION">
+                      <span class="step-num">9</span>
+                      <span class="step-label">OPTICAL REACQUISITION</span>
+                    </div>
+                    <div class="pipe-arrow">→</div>
+                    <div class="pipe-step" data-step="FINE_ALIGNMENT_REC">
+                      <span class="step-num">10</span>
+                      <span class="step-label">FINE ALIGNMENT</span>
+                    </div>
+                    <div class="pipe-arrow">→</div>
+                    <div class="pipe-step step-goal" data-step="FSOC_ACTIVE_RESTORED">
+                      <span class="step-num">★</span>
+                      <span class="step-label">FSOC ACTIVE</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- -----------------------------------------------------------------
+               Accordion 4: Terminal Security (HMAC-SHA256) (Collapsed by default)
+               ----------------------------------------------------------------- -->
+          <section class="accordion-card" id="accordionSecurity">
+            <div class="accordion-header" onclick="toggleAccordion('security')">
+              <div class="accordion-header-left">
+                <span class="accordion-icon">🔐</span>
+                <h3 class="accordion-title">TERMINAL SECURITY (HMAC-SHA256)</h3>
+                <span class="accordion-summary" id="secStatusHeaderBadge">✓ VERIFIED</span>
+              </div>
+              <span class="accordion-chevron" id="chevronSecurity">▼</span>
+            </div>
+            <div class="accordion-body" id="bodySecurity" style="display: none;">
+              <div class="accordion-inner">
+                <div class="target-callout-row">
+                  <span class="callout-label">Target:</span>
+                  <span class="callout-target" id="secTargetName">Terminal-03</span>
+                </div>
+
+                <div class="sec-concepts-grid">
+                  <!-- Identification Concept -->
+                  <div class="sec-concept-box concept-ident">
+                    <div class="concept-header">
+                      <span class="concept-icon">📡</span>
+                      <span class="concept-title">Identification</span>
+                    </div>
+                    <div class="concept-desc">Discovery &amp; Identity Verification</div>
+                    <ul class="concept-steps">
+                      <li class="step-done" id="identStep1"><span class="step-chk">✓</span> RF discovery scan completed</li>
+                      <li class="step-done" id="identStep2"><span class="step-chk">✓</span> Target terminal identified in pool</li>
+                      <li class="step-done" id="identStep3"><span class="step-chk">✓</span> Terminal ID match verified</li>
+                    </ul>
+                    <div class="concept-result text-emerald" id="identResultText">✓ IDENTIFIED</div>
+                  </div>
+
+                  <!-- Authentication Concept -->
+                  <div class="sec-concept-box concept-auth">
+                    <div class="concept-header">
+                      <span class="concept-icon">🛡️</span>
+                      <span class="concept-title">Authentication</span>
+                    </div>
+                    <div class="concept-desc">HMAC-SHA256 Challenge-Response</div>
+                    <ul class="concept-steps">
+                      <li class="step-done" id="authStep1"><span class="step-chk">✓</span> Challenge generated</li>
+                      <li class="step-done" id="authStep2">
+                        <span class="step-chk">✓</span> Nonce exchanged: 
+                        <code class="crypto-code" id="cryptoNonceText">7a9f4c...b2</code>
+                      </li>
+                      <li class="step-done" id="authStep3">
+                        <span class="step-chk">✓</span> HMAC-SHA256 computed: 
+                        <code class="crypto-code" id="cryptoHmacText">e48d...19a0</code>
+                      </li>
+                      <li class="step-done" id="authStep4"><span class="step-chk">✓</span> Signature response verified</li>
+                      <li class="step-done" id="authStep5"><span class="step-chk">✓</span> Anti-replay protection active</li>
+                    </ul>
+                    <div class="concept-result text-emerald" id="authResultText">✓ AUTHENTICATED</div>
+                  </div>
+                </div>
+
+                <div class="security-distinction-banner">
+                  <span class="banner-icon">ℹ️</span>
+                  <span class="banner-text">
+                    <strong>Core Security Principle:</strong> "We found a terminal" (Identification) is <em>NOT</em> the same as "We trust/authenticate the terminal" (Authentication). Only terminals passing the HMAC-SHA256 challenge-response are granted optical transmission alignment.
+                  </span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- -----------------------------------------------------------------
+               Accordion 5: System Tests & Validation (Collapsed by default)
+               ----------------------------------------------------------------- -->
+          <section class="accordion-card" id="accordionTests">
+            <div class="accordion-header" onclick="toggleAccordion('tests')">
+              <div class="accordion-header-left">
+                <span class="accordion-icon">🧪</span>
+                <h3 class="accordion-title">SYSTEM TESTS &amp; VALIDATION RESULTS</h3>
+                <span class="accordion-summary" id="testTotalScore">60 Tests • Passed: 60 • Failed: 0</span>
+              </div>
+              <span class="accordion-chevron" id="chevronTests">▼</span>
+            </div>
+            <div class="accordion-body" id="bodyTests" style="display: none;">
+              <div class="accordion-inner">
+                <div class="test-runner-bar">
+                  <button class="btn btn-primary btn-run-tests" id="btnRunTests" onclick="triggerSystemTests()">
+                    <span id="runTestsIcon">▶</span> <span id="runTestsText">RUN SYSTEM TESTS</span>
+                  </button>
+                  <div class="test-progress-box">
+                    <div class="test-progress-bar">
+                      <div class="test-progress-fill" id="testProgressFill" style="width: 100%;"></div>
+                    </div>
+                    <span class="test-progress-label" id="testProgressLabel">✓ ALL TESTS PASSED (60/60)</span>
+                  </div>
+                </div>
+
+                <div class="test-categories-grid" id="testCategoriesContainer">
+                  <!-- Category 1: Part 1 -->
+                  <div class="test-cat-card" id="catPart1">
+                    <div class="cat-header">
+                      <span class="cat-title">PART 1 — OPTICAL PAT</span>
+                      <span class="cat-badge text-emerald" id="catPart1Badge">✓ 5/5 PASSED</span>
+                    </div>
+                    <ul class="cat-items">
+                      <li><span class="chk-icon">✓</span> Beacon Detection</li>
+                      <li><span class="chk-icon">✓</span> Centroid Detection</li>
+                      <li><span class="chk-icon">✓</span> Boresight Alignment</li>
+                      <li><span class="chk-icon">✓</span> Pan/Tilt Control</li>
+                      <li><span class="chk-icon">✓</span> 360° Optical Search</li>
+                    </ul>
+                  </div>
+
+                  <!-- Category 2: Part 2 -->
+                  <div class="test-cat-card" id="catPart2">
+                    <div class="cat-header">
+                      <span class="cat-title">PART 2 — PREDICTIVE RECOVERY</span>
+                      <span class="cat-badge text-emerald" id="catPart2Badge">✓ 31/31 PASSED</span>
+                    </div>
+                    <ul class="cat-items">
+                      <li><span class="chk-icon">✓</span> Turbulence Handling (7 tests)</li>
+                      <li><span class="chk-icon">✓</span> Camera Response (6 tests)</li>
+                      <li><span class="chk-icon">✓</span> Kalman Prediction (7 tests)</li>
+                      <li><span class="chk-icon">✓</span> Local Reacquisition (7 tests)</li>
+                      <li><span class="chk-icon">✓</span> Lost Beacon Recovery (4 tests)</li>
+                    </ul>
+                  </div>
+
+                  <!-- Category 3: Part 3 -->
+                  <div class="test-cat-card" id="catPart3">
+                    <div class="cat-header">
+                      <span class="cat-title">PART 3 — RF SECURITY</span>
+                      <span class="cat-badge text-emerald" id="catPart3Badge">✓ 7/7 PASSED</span>
+                    </div>
+                    <ul class="cat-items">
+                      <li><span class="chk-icon">✓</span> RF Discovery</li>
+                      <li><span class="chk-icon">✓</span> Terminal Identification</li>
+                      <li><span class="chk-icon">✓</span> HMAC-SHA256 Authentication</li>
+                      <li><span class="chk-icon">✓</span> Nonce / Anti-Replay</li>
+                      <li><span class="chk-icon">✓</span> Wrong Terminal Rejection</li>
+                    </ul>
+                  </div>
+
+                  <!-- Category 4: Part 4 -->
+                  <div class="test-cat-card" id="catPart4">
+                    <div class="cat-header">
+                      <span class="cat-title">PART 4 — ADAPTIVE RECOVERY</span>
+                      <span class="cat-badge text-emerald" id="catPart4Badge">✓ 10/10 PASSED</span>
+                    </div>
+                    <ul class="cat-items">
+                      <li><span class="chk-icon">✓</span> State Machine (6 tests)</li>
+                      <li><span class="chk-icon">✓</span> Optical → RF Recovery</li>
+                      <li><span class="chk-icon">✓</span> RF → Optical Handover</li>
+                      <li><span class="chk-icon">✓</span> Complete Integration (4 closed loop)</li>
+                    </ul>
+                  </div>
+
+                  <!-- Category 5: Integration -->
+                  <div class="test-cat-card full-span" id="catIntegration">
+                    <div class="cat-header">
+                      <span class="cat-title">SYSTEM VALIDATION &amp; DASHBOARD</span>
+                      <span class="cat-badge text-emerald" id="catIntBadge">✓ 7/7 PASSED</span>
+                    </div>
+                    <ul class="cat-items inline-items">
+                      <li><span class="chk-icon">✓</span> Mission Control HTTP Server</li>
+                      <li><span class="chk-icon">✓</span> Real-Time Telemetry Bridge</li>
+                      <li><span class="chk-icon">✓</span> Dual SSE Stream &amp; Disturbance Handlers</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- -----------------------------------------------------------------
+               Accordion 6: Advanced Engineering Telemetry (Collapsed by default)
+               ----------------------------------------------------------------- -->
+          <section class="accordion-card" id="accordionSystemDetails">
+            <div class="accordion-header" onclick="toggleAccordion('systemDetails')">
+              <div class="accordion-header-left">
+                <span class="accordion-icon">⚙️</span>
+                <h3 class="accordion-title">SYSTEM DETAILS &amp; ADVANCED TELEMETRY</h3>
+                <span class="accordion-summary">Low-level numerical parameters</span>
+              </div>
+              <span class="accordion-chevron" id="chevronSystemDetails">▼</span>
+            </div>
+            <div class="accordion-body" id="bodySystemDetails" style="display: none;">
+              <div class="accordion-inner">
+                <div class="metrics-grid">
+                  <div class="metric-box">
+                    <span class="box-label">RADIAL ERROR</span>
+                    <span class="box-val text-amber" id="telemRadialError">0.0 px</span>
+                    <span class="box-unit">Fine tolerance: 15.0 px</span>
+                  </div>
+                  <div class="metric-box">
+                    <span class="box-label">ANGULAR ERROR</span>
+                    <span class="box-val text-amber" id="telemAngularError">0.000°</span>
+                    <span class="box-unit">Boresight offset</span>
+                  </div>
+                  <div class="metric-box">
+                    <span class="box-label">CAMERA AZIMUTH</span>
+                    <span class="box-val text-cyan" id="telemCameraAngle">38.0°</span>
+                    <span class="box-unit">FOV: 35.0°</span>
+                  </div>
+                  <div class="metric-box">
+                    <span class="box-label">KALMAN CONFIDENCE</span>
+                    <span class="box-val text-emerald" id="telemConfidence">100%</span>
+                    <span class="box-unit">Missed frames: <span id="telemMissCount">0</span></span>
+                  </div>
+                  <div class="metric-box">
+                    <span class="box-label">COVARIANCE TRACE</span>
+                    <span class="box-val text-cyan" id="telemCovTrace">1.45</span>
+                    <span class="box-unit">Gating threshold: 80.0 px</span>
+                  </div>
+                  <div class="metric-box">
+                    <span class="box-label">FLIGHT KINEMATICS</span>
+                    <span class="box-val text-cyan" id="telemFlightKinematics">--</span>
+                    <span class="box-unit">Speed &amp; Heading</span>
+                  </div>
+                  <div class="metric-box">
+                    <span class="box-label">RF RSSI SIGNAL</span>
+                    <span class="box-val text-emerald" id="telemRssi">-45.0 dBm</span>
+                    <span class="box-unit">Omni 360° auxiliary</span>
+                  </div>
+                  <div class="metric-box">
+                    <span class="box-label">BEACON CENTROID</span>
+                    <span class="box-val text-amber" id="telemCentroidCoords">--</span>
+                    <span class="box-unit">Raw pixel coordinates</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- -----------------------------------------------------------------
+               Accordion 7: Real-Time Event Log & Audit Trail (Collapsed by default)
+               ----------------------------------------------------------------- -->
+          <section class="accordion-card" id="accordionEventLog">
+            <div class="accordion-header" onclick="toggleAccordion('eventLog')">
+              <div class="accordion-header-left">
+                <span class="accordion-icon">📜</span>
+                <h3 class="accordion-title">REAL-TIME EVENT LOG &amp; AUDIT TRAIL</h3>
+                <span class="accordion-summary">Live Mission Event Stream</span>
+              </div>
+              <span class="accordion-chevron" id="chevronEventLog">▼</span>
+            </div>
+            <div class="accordion-body" id="bodyEventLog" style="display: none;">
+              <div class="accordion-inner">
+                <div class="sec-mini-header">
+                  <span class="sec-title">LIVE EVENT AUDIT STREAM:</span>
+                  <button class="btn btn-sm" onclick="clearEventLog()">Clear Log</button>
+                </div>
+                <div class="event-log-box" id="eventLogBox">
+                  <div class="log-entry log-part4">[PART 4] Mission Control Dashboard Connected</div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+        </div> <!-- End accordions-container -->
+
+      </main>
+    </div> <!-- End workspace-scalable -->
+  </div> <!-- End workspace-viewport -->
+
+  <!-- =========================================================================
+       Footer
+       ========================================================================= -->
+  <footer class="bottom-bar">
+    <span>TEAM RAYNEX • SMART INDIA HACKATHON 2026 • ISRO PROBLEM STATEMENT SIH26169</span>
+    <span id="simClockText">SIM TIME: 0.0s | STEP: 0 | TARGET: Terminal-03</span>
+  </footer>
+
+  <!-- Native JavaScript Controller -->
+  <script src="app.js"></script>
+</body>
+</html>
